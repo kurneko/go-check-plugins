@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -32,6 +33,28 @@ type checkHTTPOpts struct {
 	MaxRedirects       int      `long:"max-redirects" description:"Maximum number of redirects followed" default:"10"`
 	ConnectTos         []string `long:"connect-to" value-name:"HOST1:PORT1:HOST2:PORT2" description:"Request to HOST2:PORT2 instead of HOST1:PORT1"`
 	Proxy              string   `short:"x" long:"proxy" value-name:"[PROTOCOL://][USER:PASS@]HOST[:PORT]" description:"Use the specified proxy. PROTOCOL's default is http, and PORT's default is 1080."`
+	Timeout            int      `short:"t" long:"timeout" desctipyion:"set Timeout" default:"30"`
+	Warning            float64  `short:"w" long:"warning" description:"Response time to result in warning status (seconds)"`
+	Critical           float64  `short:"c" long:"critical" description:"Response time to result in cretical status (seconds)"`
+}
+
+// customTransport
+
+type customTransport struct {
+	Transport http.RoundTripper
+	Output    io.Writer
+	ReqStart  time.Time
+	ReqEnd    time.Time
+}
+
+func (tr *customTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	tr.ReqStart = time.Now()
+	resp, err := tr.Transport.RoundTrip(r)
+	tr.ReqEnd = time.Now()
+	return resp, err
+}
+func (tr *customTransport) ReqDuration() time.Duration {
+	return tr.ReqEnd.Sub(tr.ReqStart)
 }
 
 // Do the plugin
@@ -215,11 +238,13 @@ func Run(args []string) *checkers.Checker {
 		},
 		Proxy: http.ProxyFromEnvironment,
 	}
-	// same as http.Transport's default dialer
 	dialer := &net.Dialer{
 		Timeout:   30 * time.Second,
 		KeepAlive: 30 * time.Second,
 		DualStack: true,
+	}
+	cstr := &customTransport{
+		Transport: tr,
 	}
 	if opts.SourceIP != "" {
 		ip := net.ParseIP(opts.SourceIP)
@@ -244,7 +269,7 @@ func Run(args []string) *checkers.Checker {
 		}
 		tr.DialContext = newReplacableDial(dialer, resolves)
 	}
-	client := &http.Client{Transport: tr}
+	client := &http.Client{Transport: cstr, Timeout: time.Duration(opts.Timeout) * time.Second}
 	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 		if len(via) > opts.MaxRedirects {
 			return http.ErrUseLastResponse
@@ -277,12 +302,11 @@ func Run(args []string) *checkers.Checker {
 		req.Header.Set("User-Agent", "check-http")
 	}
 
-	stTime := time.Now()
 	resp, err := client.Do(req)
 	if err != nil {
 		return checkers.Critical(err.Error())
 	}
-	elapsed := time.Since(stTime)
+	elapsed := cstr.ReqDuration()
 	defer resp.Body.Close()
 
 	body, _ := ioutil.ReadAll(resp.Body)
@@ -325,6 +349,14 @@ func Run(args []string) *checkers.Checker {
 			fmt.Fprintf(respMsg, "'%s' not found in the content\n", opts.Regexp)
 			checkSt = checkers.CRITICAL
 		}
+	}
+
+	if opts.Warning != 0 && opts.Warning < elapsed.Seconds() {
+		checkSt = checkers.WARNING
+	}
+
+	if opts.Critical != 0 && opts.Critical < elapsed.Seconds() {
+		checkSt = checkers.CRITICAL
 	}
 
 	fmt.Fprintf(respMsg, "%s %s - %d bytes in %f second response time",
