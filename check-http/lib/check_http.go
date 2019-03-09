@@ -33,9 +33,10 @@ type checkHTTPOpts struct {
 	MaxRedirects       int      `long:"max-redirects" description:"Maximum number of redirects followed" default:"10"`
 	ConnectTos         []string `long:"connect-to" value-name:"HOST1:PORT1:HOST2:PORT2" description:"Request to HOST2:PORT2 instead of HOST1:PORT1"`
 	Proxy              string   `short:"x" long:"proxy" value-name:"[PROTOCOL://][USER:PASS@]HOST[:PORT]" description:"Use the specified proxy. PROTOCOL's default is http, and PORT's default is 1080."`
-	Timeout            int      `short:"t" long:"timeout" desctipyion:"set Timeout" default:"30"`
+	Timeout            int      `short:"t" long:"timeout" description:"set Timeout" default:"30"`
 	Warning            float64  `short:"w" long:"warning" description:"Response time to result in warning status (seconds)"`
 	Critical           float64  `short:"c" long:"critical" description:"Response time to result in cretical status (seconds)"`
+	Link               bool     `short:"L" long:"link" description:"Wrap output in HTML link (obsoleted by urlize)"`
 }
 
 // customTransport
@@ -359,8 +360,14 @@ func Run(args []string) *checkers.Checker {
 		checkSt = checkers.CRITICAL
 	}
 
-	fmt.Fprintf(respMsg, "%s %s - %d bytes in %f second response time",
-		resp.Proto, resp.Status, cLength, elapsed.Seconds())
+	if opts.Link {
+		link := fmt.Sprintf("<A HREF=\"%s\" target=\"_blank\">", opts.URL)
+		fmt.Fprintf(respMsg, "%s %s %s - %d bytes in %f second response time </A>",
+			link, resp.Proto, resp.Status, cLength, elapsed.Seconds())
+	} else {
+		fmt.Fprintf(respMsg, "%s %s - %d bytes in %f second response time",
+			resp.Proto, resp.Status, cLength, elapsed.Seconds())
+	}
 
 	return checkers.NewChecker(checkSt, respMsg.String())
 }
