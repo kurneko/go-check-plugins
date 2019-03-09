@@ -37,8 +37,8 @@ type checkHTTPOpts struct {
 	Warning            float64  `short:"w" long:"warning" description:"Response time to result in warning status (seconds)"`
 	Critical           float64  `short:"c" long:"critical" description:"Response time to result in cretical status (seconds)"`
 	Link               bool     `short:"L" long:"link" description:"Wrap output in HTML link"`
-	CertificateWarn    int      `short:"W" description:"Minimum number of days a certificate has to be valid. Port defaults to 443(when this option is used the URL is not checked.)"`
-	CertificateCrit    int      `short:"C" description:"Minimum number of days a certificate has to be valid. Port defaults to 443(when this option is used the URL is not checked.)"`
+	CertificateWarn    int      `short:"W" long:"certwarning" description:"Minimum number of days a certificate has to be valid. Port defaults to 443(when this option is used the URL is not checked.)"`
+	CertificateCrit    int      `short:"C" long:"certcritical" description:"Minimum number of days a certificate has to be valid. Port defaults to 443(when this option is used the URL is not checked.)"`
 }
 
 // customTransport
