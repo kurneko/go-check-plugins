@@ -37,6 +37,8 @@ type checkHTTPOpts struct {
 	Warning            float64  `short:"w" long:"warning" description:"Response time to result in warning status (seconds)"`
 	Critical           float64  `short:"c" long:"critical" description:"Response time to result in cretical status (seconds)"`
 	Link               bool     `short:"L" long:"link" description:"Wrap output in HTML link"`
+	CertificateWarn    int      `short:"W" description:"Minimum number of days a certificate has to be valid. Port defaults to 443(when this option is used the URL is not checked.)"`
+	CertificateCrit    int      `short:"C" description:"Minimum number of days a certificate has to be valid. Port defaults to 443(when this option is used the URL is not checked.)"`
 }
 
 // customTransport
@@ -318,6 +320,30 @@ func Run(args []string) *checkers.Checker {
 	}
 
 	checkSt := checkers.UNKNOWN
+	respMsg := new(bytes.Buffer)
+
+	//Certificate check
+	if opts.CertificateWarn != 0 || opts.CertificateCrit != 0 {
+
+		if len(resp.TLS.PeerCertificates) == 0 {
+			checkers.Unknown("TLS.PeerCertificates is Not Found.")
+		}
+		domain := resp.TLS.PeerCertificates[0].DNSNames[0]
+		expireUTCTime := resp.TLS.PeerCertificates[0].NotAfter
+		daysLeft := expireUTCTime.Sub(time.Now())
+		expireDays := int(daysLeft.Seconds()) / 86400
+		if opts.CertificateCrit > expireDays {
+			checkSt = checkers.CRITICAL
+		} else if opts.CertificateWarn > expireDays {
+			checkSt = checkers.WARNING
+		} else {
+			checkSt = checkers.OK
+		}
+
+		fmt.Fprintf(respMsg, "Certificate %s will expire in %d days in %s",
+			domain, expireDays, expireUTCTime.Format("2006-01-02 15:04:05"))
+		return checkers.NewChecker(checkSt, respMsg.String())
+	}
 
 	found := false
 	for _, st := range statusRanges {
@@ -338,8 +364,6 @@ func Run(args []string) *checkers.Checker {
 			checkSt = checkers.CRITICAL
 		}
 	}
-
-	respMsg := new(bytes.Buffer)
 
 	if opts.Regexp != "" {
 		re, err := regexp.Compile(opts.Regexp)
