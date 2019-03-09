@@ -482,3 +482,48 @@ func TestTimeout(t *testing.T) {
 		assert.Equal(t, ckr.Status, ckr.Status, "#%d: Status should be %s, %s", i, tc.want, ckr.Message)
 	}
 }
+
+func TestCerttificate(t *testing.T) {
+
+	testCases := []struct {
+		args []string
+		want checkers.Status
+	}{
+		{
+			args: []string{
+				"-u", "https://mackerel.io",
+				"-W", "10",
+				"-C", "20",
+			},
+			want: checkers.OK,
+		},
+		{
+			args: []string{
+				"-u", "https://mackerel.io",
+				"-W", "1000",
+			},
+			want: checkers.WARNING,
+		},
+		{
+			args: []string{
+				"-u", "https://mackerel.io",
+				"-W", "1000",
+				"-C", "10",
+			},
+			want: checkers.CRITICAL,
+		},
+		{
+			args: []string{
+				"-u", "https://mackerel.io",
+				"-W", "10",
+				"-C", "1",
+			},
+			want: checkers.CRITICAL,
+		},
+	}
+
+	for i, tc := range testCases {
+		ckr := Run(tc.args)
+		assert.Equal(t, ckr.Status, ckr.Status, "#%d: Status should be %s, %s", i, tc.want, ckr.Message)
+	}
+}
