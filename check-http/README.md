@@ -51,6 +51,17 @@ command = ["check-http", "-u", "http://example.com"]
       --max-redirects=                                Maximum number of redirects followed (default: 10)
       --connect-to=HOST1:PORT1:HOST2:PORT2            Request to HOST2:PORT2 instead of HOST1:PORT1
   -x, --proxy=[PROTOCOL://][USER:PASS@]HOST[:PORT]    Use the specified proxy. PROTOCOL's default is http, and PORT's default is 1080.
+  -t, --timeout=                                      set Timeout (default: 30)
+  -w, --warning=                                      Response time to result in warning status (seconds)
+  -c, --critical=                                     Response time to result in cretical status (seconds)
+  -L, --link                                          Wrap output in HTML link
+  -W, --certwarning=                                  Minimum number of days a certificate has to be valid. Port defaults to 443(when this option is used the
+                                                      URL is not checked.)
+  -C, --certcritical=                                 Minimum number of days a certificate has to be valid. Port defaults to 443(when this option is used the
+                                                      URL is not checked.)
+
+Help Options:
+  -h, --help                                          Show this help message
 ```
 
 
@@ -74,6 +85,14 @@ To request via proxy (http/https/socks5)
 check-http --proxy=http://localhost:8080 -u http://example.com # request via http://localhost:8080
 HTTP_PROXY=http://localhost:8080 check-http  -u http://example.com # Same. you can set proxy via environment variable
 check-http --proxy=http://user:pass@localhost:8080 -u http://example.com # basic authentication is also supported
+```
+
+To Certificate check
+
+```shell
+
+check-http -u https://example.com -W 31 -C 14
+
 ```
 ## For more information
 
