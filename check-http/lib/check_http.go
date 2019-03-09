@@ -36,7 +36,7 @@ type checkHTTPOpts struct {
 	Timeout            int      `short:"t" long:"timeout" description:"set Timeout" default:"30"`
 	Warning            float64  `short:"w" long:"warning" description:"Response time to result in warning status (seconds)"`
 	Critical           float64  `short:"c" long:"critical" description:"Response time to result in cretical status (seconds)"`
-	Link               bool     `short:"L" long:"link" description:"Wrap output in HTML link (obsoleted by urlize)"`
+	Link               bool     `short:"L" long:"link" description:"Wrap output in HTML link"`
 }
 
 // customTransport
