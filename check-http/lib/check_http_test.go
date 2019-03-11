@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/elazarl/goproxy"
 	"github.com/elazarl/goproxy/ext/auth"
@@ -384,5 +385,115 @@ func TestProxy_Auth(t *testing.T) {
 	for i, tc := range testCases {
 		ckr := Run(tc.args)
 		assert.Equal(t, ckr.Status, tc.want, "#%d: Status should be %s, %s", i, tc.want, ckr.Message)
+	}
+}
+func TestWarnCrit(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(3 * time.Second)
+		fmt.Fprintf(w, "this is %s\n", r.URL.Host)
+	}))
+	defer ts.Close()
+
+	testCases := []struct {
+		args []string
+		want checkers.Status
+	}{
+		{
+			// warn: ok, crit: ok
+			args: []string{
+				"-u", ts.URL,
+				"-w", "1",
+				"-c", "2",
+			},
+			want: checkers.OK,
+		},
+		{
+			// warn: ok, crit: nil
+			args: []string{
+				"-u", ts.URL,
+				"-w", "2",
+			},
+			want: checkers.OK,
+		},
+		{
+			// warn: ng, crit: nil
+			args: []string{
+				"-u", ts.URL,
+				"-w", "4",
+			},
+			want: checkers.WARNING,
+		},
+		{
+			// warn: ok crit: ng
+			args: []string{
+				"-u", ts.URL,
+				"-w", "2",
+				"-c", "4",
+			},
+			want: checkers.CRITICAL,
+		},
+		{
+			// warn: ng, crit: ng
+			args: []string{
+				"-u", ts.URL,
+				"-w", "4",
+				"-c", "5",
+			},
+			want: checkers.CRITICAL,
+		},
+		{
+			// warn: nil, crit: ok
+			args: []string{
+				"-u", ts.URL,
+				"-c", "2",
+			},
+			want: checkers.OK,
+		},
+		{
+			// watn: nil, crit:ng
+			args: []string{
+				"-u", ts.URL,
+				"-c", "5",
+			},
+			want: checkers.CRITICAL,
+		},
+	}
+
+	for i, tc := range testCases {
+		ckr := Run(tc.args)
+		assert.Equal(t, ckr.Status, ckr.Status, "#%d: Status should be %s, %s", i, tc.want, ckr.Message)
+	}
+}
+
+func TestTimeout(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(3 * time.Second)
+		fmt.Fprintf(w, "this is %s\n", r.URL.Host)
+	}))
+	defer ts.Close()
+
+	testCases := []struct {
+		args []string
+		want checkers.Status
+	}{
+		{
+			args: []string{
+				"-u", ts.URL,
+				"-t", "1",
+			},
+			want: checkers.OK,
+		},
+		{
+			args: []string{
+				"-u", ts.URL,
+				"-t", "4",
+			},
+			want: checkers.CRITICAL,
+		},
+	}
+
+	for i, tc := range testCases {
+		ckr := Run(tc.args)
+		assert.Equal(t, ckr.Status, ckr.Status, "#%d: Status should be %s, %s", i, tc.want, ckr.Message)
 	}
 }
