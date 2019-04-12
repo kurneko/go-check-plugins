@@ -51,8 +51,17 @@ command = ["check-http", "-u", "http://example.com"]
       --max-redirects=                                Maximum number of redirects followed (default: 10)
       --connect-to=HOST1:PORT1:HOST2:PORT2            Request to HOST2:PORT2 instead of HOST1:PORT1
   -x, --proxy=[PROTOCOL://][USER:PASS@]HOST[:PORT]    Use the specified proxy. PROTOCOL's default is http, and PORT's default is 1080.
+  -t, --timeout=                                      Set Connection Timeout (default: 30)
+  -w, --warning=                                      Response time to result in warning status (seconds)
+  -c, --critical=                                     Response time to result in cretical status (seconds)
 ```
 
+Check request time
+
+```shell
+check-http -u http://example.com -w 5 -c 10 -t 15
+check-http -u http://example.com -c 30 -t 60
+```
 
 To override status
 ```shell
